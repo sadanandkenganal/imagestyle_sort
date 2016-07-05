@@ -1,0 +1,185 @@
+<?php
+
+/**
+ * @file
+ * Provides an option to order the images styles in a specific order.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function imagestyles_sort_help($path, $arg) {
+  switch ($path) {
+    case 'admin/config/media/imagestyles/sort':
+      return '<p>' . t('Provides an option to order the images styles in a specific order by draggind and droping. It might be useful, when you are giving image styles as options for users in terms of menu items OR something like that') . '</p>';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function imagestyles_sort_menu() {
+  $items = array();
+  $items['admin/config/media/imagestyles/sort'] = array(
+    'title' => 'Image styles Sort',
+    'description' => 'Show a page with a draggable image styles form.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('imagestyles_sort_form'),
+    'access arguments' => array('administer image styles'),
+  );
+  return $items;
+}
+
+/**
+ * Build the imagestyles_sort_form form.
+ *
+ * @return array
+ *   A form array set for theming by theme_imagestyles_sort_form()
+ */
+function imagestyles_sort_form($form_state) {
+  $form['image_style_items']['#tree'] = TRUE;
+
+  // Get image styles from our custom table.
+  $result = imagestyles_sort_get_image_styles();
+
+  $styles = image_styles();
+
+  // Iterate through each database result.
+  foreach ($result as $item) {
+    $form['image_style_items'][$item->name] = array(
+      'name' => array(
+        '#markup' => check_plain($styles[$item->name]['label']),
+      ),
+      'weight' => array(
+        '#type' => 'weight',
+        '#title' => t('Weight'),
+        '#default_value' => $item->weight,
+        '#delta' => 10,
+        '#title_display' => 'invisible',
+      ),
+    );
+  }
+
+  $form['actions'] = array('#type' => 'actions');
+  $form['actions']['submit'] = array('#type' => 'submit', '#value' => t('Save Changes'));
+  return $form;
+}
+
+/**
+ * Theme callback for the imagestyles_sort_form form.
+ *
+ * @return array
+ *   The rendered tabledrag form
+ */
+function theme_imagestyles_sort_form($variables) {
+  $form = $variables['form'];
+
+  // Initialize the variable which will store our table rows.
+  $rows = array();
+
+  // Iterate over each element in our $form['example_items'] array.
+  foreach (element_children($form['image_style_items']) as $id) {
+    $form['image_style_items'][$id]['weight']['#attributes']['class'] = array('image-style-item-weight');
+    $rows[] = array(
+      'data' => array(
+        drupal_render($form['image_style_items'][$id]['name']),
+        drupal_render($form['image_style_items'][$id]['weight']),
+      ),
+      'class' => array('draggable'),
+    );
+  }
+
+  $header = array(t('Name'), t('Weight'));
+  $table_id = 'image-style-sort-table';
+
+  // We can render our tabledrag table for output.
+  $output = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => $table_id),
+    '#empty' => t('Table has no rows!'),
+  ));
+
+  // And then render any remaining form elements (such as our submit button).
+  $output .= drupal_render_children($form);
+  drupal_add_tabledrag($table_id, 'order', 'sibling', 'image-style-item-weight');
+
+  return $output;
+}
+
+/**
+ * Submit callback for the imagestyles_sort_form_submit.
+ */
+function imagestyles_sort_form_submit($form, &$form_state) {
+  // Because the form elements were keyed with the item ids from the database,
+  // we can simply iterate through the submitted values.
+  foreach ($form_state['values']['image_style_items'] as $machine_name => $item) {
+    db_query(
+      "UPDATE {imagestyles_sort} SET weight = :weight WHERE name = :name",
+      array(':weight' => $item['weight'], ':name' => $machine_name)
+    );
+  }
+
+  drupal_set_message(t('Image styles order is updated successfully.'));
+  // Clear image style.
+  cache_clear_all('image_styles', 'cache');
+
+}
+
+/**
+ * Implements hook_image_style_save().
+ */
+function imagestyles_sort_image_style_save($style) {
+  if (!empty($style['is_new'])) {
+    db_insert('imagestyles_sort')
+      ->fields(array(
+        'name' => $style['name'],
+        'weight' => 0,
+      ))->execute();
+  }
+}
+
+/**
+ * Implements hook_image_style_delete().
+ */
+function imagestyles_sort_image_style_delete($style) {
+  if (isset($style['old_name'])) {
+    db_delete('imagestyles_sort')
+      ->condition('name', $style['old_name'])
+      ->execute();
+  }
+}
+
+/**
+ * Implements hook_image_styles_alter().
+ */
+function imagestyles_sort_image_styles_alter(&$styles) {
+  // Get image styles from our custom table.
+  $result = imagestyles_sort_get_image_styles();
+  $ordered_styles = array();
+  if (!empty($styles) && !empty($result)) {
+    foreach ($result as $item) {
+      $ordered_styles[$item->name] = $styles[$item->name];
+    }
+    $styles = $ordered_styles;
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function imagestyles_sort_theme() {
+  return array(
+    'imagestyles_sort_form' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Function to get sorted images styles.
+ */
+function imagestyles_sort_get_image_styles() {
+  // Fetch the example data from the database, ordered by weight ascending.
+  return (db_query('SELECT name, weight FROM {imagestyles_sort} ORDER BY weight ASC'));
+}

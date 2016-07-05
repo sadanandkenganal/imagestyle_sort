@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the imagestyles_sort module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function imagestyles_sort_install() {
+  // Insert existing image styles to 'imagestyles_sort' table
+  // with default weight 0.
+  $image_styles = image_style_options(FALSE);
+  if (!empty($image_styles)) {
+    foreach ($image_styles as $key => $value) {
+      $rows[] = array(
+        'name' => $key,
+        'weight' => 0,
+      );
+    }
+
+    $query = db_insert('imagestyles_sort')->fields(array('name', 'weight'));
+    foreach ($rows as $row) {
+      $query->values($row);
+    }
+    $query->execute();
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function imagestyles_sort_uninstall() {
+  // Drop the table.
+  db_drop_table('imagestyles_sort');
+}
+
+/**
+ * Implements hook_schema().
+ */
+function imagestyles_sort_schema() {
+  $schema = array();
+
+  $schema['imagestyles_sort'] = array(
+    'description' => 'Stores image styles machine name and their weight.',
+    'fields' => array(
+      'name' => array(
+        'description' => 'The image style machine name.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => "The image style's weight.",
+      ),
+    ),
+    'unique keys' => array(
+      'name' => array('name'),
+    ),
+  );
+  return $schema;
+}
