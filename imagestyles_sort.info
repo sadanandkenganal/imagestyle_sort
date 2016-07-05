@@ -1,0 +1,5 @@
+name = Image Styles Sort
+description = Provides an option to order the images styles in a specific order by dragging and dropping.
+package = Custom
+core = 7.x
+configure = admin/config/media/imagestyles/sort
