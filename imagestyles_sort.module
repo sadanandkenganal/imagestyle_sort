@@ -90,10 +90,11 @@ function theme_imagestyles_sort_form($variables) {
 
   // Initialize the variable which will store our table rows.
   $rows = array();
+  $table_class = 'image-style-item-weight';
 
   // Iterate over each element in our $form['example_items'] array.
   foreach (element_children($form['image_style_items']) as $id) {
-    $form['image_style_items'][$id]['weight']['#attributes']['class'] = array('image-style-item-weight');
+    $form['image_style_items'][$id]['weight']['#attributes']['class'] = array($table_class);
     $rows[] = array(
       'data' => array(
         drupal_render($form['image_style_items'][$id]['name']),
@@ -116,7 +117,7 @@ function theme_imagestyles_sort_form($variables) {
 
   // And then render any remaining form elements (such as our submit button).
   $output .= drupal_render_children($form);
-  drupal_add_tabledrag($table_id, 'order', 'sibling', 'image-style-item-weight');
+  drupal_add_tabledrag($table_id, 'order', 'sibling', $table_class);
 
   return $output;
 }
@@ -189,14 +190,12 @@ function imagestyles_sort_image_style_delete($style) {
 function imagestyles_sort_image_styles_alter(&$styles) {
   // Get image styles from our custom table.
   $result = imagestyles_sort_get_image_styles();
-  if (count($result)) {
+  if (count($result) && !empty($styles) {
     $ordered_styles = array();
-    if (!empty($styles)) {
-      foreach ($result as $name => $weight) {
-        $ordered_styles[$name] = $styles[$name];
-      }
-      $styles = $ordered_styles;
+    foreach ($result as $name => $weight) {
+      $ordered_styles[$name] = $styles[$name];
     }
+    $styles = $ordered_styles;
   }
 }
 
