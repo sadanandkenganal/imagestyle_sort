@@ -190,7 +190,7 @@ function imagestyles_sort_image_style_delete($style) {
 function imagestyles_sort_image_styles_alter(&$styles) {
   // Get image styles from our custom table.
   $result = imagestyles_sort_get_image_styles();
-  if (count($result) && !empty($styles) {
+  if (count($result) && !empty($styles)) {
     $ordered_styles = array();
     foreach ($result as $name => $weight) {
       $ordered_styles[$name] = $styles[$name];

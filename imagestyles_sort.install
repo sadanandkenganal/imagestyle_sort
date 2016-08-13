@@ -11,26 +11,21 @@
 function imagestyles_sort_install() {
   // Insert existing image styles to 'image_styles_sort' table
   // with default weight 0.
-  foreach (image_style_options(FALSE) as $key => $value) {
-    $rows[] = array(
-      'name' => $key,
-      'weight' => 0,
-    );
-  }
+  $styles = image_style_options(FALSE);
+  if (!empty($styles)) {
+    foreach ($styles as $key => $value) {
+      $rows[] = array(
+        'name' => $key,
+        'weight' => 0,
+      );
+    }
 
-  $query = db_insert('imagestyles_sort')->fields(array('name', 'weight'));
-  foreach ($rows as $row) {
-    $query->values($row);
+    $query = db_insert('imagestyles_sort')->fields(array('name', 'weight'));
+    foreach ($rows as $row) {
+      $query->values($row);
+    }
+    $query->execute();
   }
-  $query->execute();
-}
-
-/**
- * Implements hook_uninstall().
- */
-function imagestyles_sort_uninstall() {
-  // Drop the table.
-  db_drop_table('imagestyles_sort');
 }
 
 /**
